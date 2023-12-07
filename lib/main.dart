@@ -18,9 +18,9 @@ class CameraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-
         body: CameraScreen(cameras: cameras),
       ),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

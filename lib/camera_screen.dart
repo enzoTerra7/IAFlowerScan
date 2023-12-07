@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'dart:io';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -95,24 +99,50 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  void _showImagePreview() {
+  Future<void> _showImagePreview() async {
     if (_imageFile != null) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            content: Image.file(File(_imageFile!.path)),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('Fechar'),
+      try {
+        List<int> imageBytes = await _imageFile!.readAsBytes();
+        String base64Image = base64Encode(Uint8List.fromList(imageBytes));
+        print('make the request');
+        final response = await http.post(
+          Uri.parse('http://192.168.169.240:5000/classify'),
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(<String, String>{
+            'image': base64Image,
+          })
+        );
+        Map<String, dynamic> data = jsonDecode(response.body);
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              content: Column(
+                children: [
+                  Image.file(File(_imageFile!.path)),
+                  SizedBox(height: 16),
+                  Text(
+                    'A flor é uma ${data["class_name"]}. Certeza de ${data["certainty"].toStringAsFixed(2)}%',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
-      );
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Fechar'),
+                ),
+              ],
+            );
+          },
+        );
+      } catch(e) {
+        print(e);
+      }
     }
   }
 
